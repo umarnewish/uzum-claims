@@ -36,8 +36,13 @@ function render(items) {
   }
   const groupsHtml = group(items).map((g) => {
     const lines = g.rows.map((r) => {
-      const total = (r.unit_compensation ?? 0) * (r.expected_qty - (r.received_qty ?? 0) || r.expected_qty);
+      const outstanding = r.received_qty == null ? r.expected_qty : (r.expected_qty - r.received_qty);
+      const total = (r.unit_compensation ?? 0) * outstanding;
       const claimed = r.claim_id ? `<span class="pill">в претензии #${r.claim_id}</span>` : '';
+      const editable = !r.claim_id && r.loss_type !== 'return_transit';
+      const recvCell = editable
+        ? `<input type="number" class="recv" data-id="${r.id}" min="0" max="${r.expected_qty}" value="${r.received_qty ?? ''}" placeholder="—"/>`
+        : (r.received_qty ?? '—');
       return `
         <tr>
           <td><input type="checkbox" data-id="${r.id}" ${r.claim_id ? 'disabled' : ''}/></td>
@@ -46,7 +51,7 @@ function render(items) {
             <div class="muted-text">${escape(r.barcode) || ''}</div>
           </td>
           <td class="num">${r.expected_qty}</td>
-          <td class="num">${r.received_qty ?? '—'}</td>
+          <td class="num">${recvCell}</td>
           <td class="num">${fmtMoney(r.unit_compensation)}</td>
           <td class="num">${fmtMoney(total)}</td>
           <td>${claimed}</td>
@@ -108,5 +113,27 @@ refreshBtn.addEventListener('click', async () => {
 
 filterType.addEventListener('change', load);
 filterClaim.addEventListener('change', load);
+
+groups.addEventListener('change', async (ev) => {
+  const el = ev.target;
+  if (!el.matches('input.recv')) return;
+  const id = el.dataset.id;
+  const v = el.value.trim();
+  if (v === '') return;
+  const received_qty = Number(v);
+  if (!Number.isFinite(received_qty) || received_qty < 0) {
+    toast('Некорректное число', 'error');
+    return;
+  }
+  el.disabled = true;
+  try {
+    await api(`/api/losses/${id}/confirm`, { method: 'POST', body: { received_qty } });
+    toast('Получение зафиксировано', 'success');
+    await load();
+  } catch (e) {
+    toast(e.message, 'error');
+    el.disabled = false;
+  }
+});
 
 load();
