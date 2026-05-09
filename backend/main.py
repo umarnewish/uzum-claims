@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.config import get_settings
-from backend.routers import health, losses, profile
+from backend.routers import claims, health, losses, profile
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -48,6 +48,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api")
 app.include_router(profile.router, prefix="/api")
 app.include_router(losses.router, prefix="/api")
+app.include_router(claims.router, prefix="/api")
 
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
 if os.path.isdir(frontend_path):
@@ -64,6 +65,10 @@ if os.path.isdir(frontend_path):
     @app.get("/losses", include_in_schema=False)
     async def losses_page():
         return FileResponse(os.path.join(frontend_path, "losses.html"))
+
+    @app.get("/new-claim", include_in_schema=False)
+    async def new_claim_page():
+        return FileResponse(os.path.join(frontend_path, "new-claim.html"))
 
 
 if __name__ == "__main__":

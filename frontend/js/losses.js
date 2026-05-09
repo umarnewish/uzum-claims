@@ -3,6 +3,7 @@ import { api, toast } from './api.js';
 const status = document.getElementById('status');
 const groups = document.getElementById('groups');
 const refreshBtn = document.getElementById('refresh-btn');
+const createBtn = document.getElementById('create-claim-btn');
 const filterType = document.getElementById('filter-type');
 const filterClaim = document.getElementById('filter-claim');
 
@@ -113,6 +114,34 @@ refreshBtn.addEventListener('click', async () => {
 
 filterType.addEventListener('change', load);
 filterClaim.addEventListener('change', load);
+
+function selectedIds() {
+  return [...groups.querySelectorAll('input[type=checkbox][data-id]:checked')]
+    .map((el) => Number(el.dataset.id));
+}
+
+function syncCreateBtn() {
+  const ids = selectedIds();
+  createBtn.disabled = ids.length === 0;
+  createBtn.textContent = `Создать претензию (${ids.length})`;
+}
+
+groups.addEventListener('change', (ev) => {
+  if (ev.target.matches('input[type=checkbox][data-id]')) syncCreateBtn();
+});
+
+createBtn.addEventListener('click', async () => {
+  const ids = selectedIds();
+  if (!ids.length) return;
+  createBtn.disabled = true;
+  try {
+    const claim = await api('/api/claims', { method: 'POST', body: { lost_item_ids: ids } });
+    window.location.href = `/new-claim?id=${claim.id}`;
+  } catch (e) {
+    toast(e.message, 'error');
+    createBtn.disabled = false;
+  }
+});
 
 groups.addEventListener('change', async (ev) => {
   const el = ev.target;

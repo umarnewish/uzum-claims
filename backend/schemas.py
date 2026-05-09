@@ -62,3 +62,38 @@ class RefreshSummary(BaseModel):
     fbo_supply_reject: int = 0
     order_lost_delivery: int = 0
     errors: list[str] = []
+
+
+# ───── claims ─────
+
+class ClaimCreateIn(BaseModel):
+    lost_item_ids: list[int] = Field(min_length=1)
+
+
+class ClaimOut(BaseModel):
+    id: int
+    user_id: int
+    shop_id: int
+    status: str
+    total_amount: Optional[int]
+    total_qty: Optional[int]
+    generated_docx_path: Optional[str]
+    generated_agreement_path: Optional[str]
+    submitted_at: Optional[datetime]
+    paid_at: Optional[datetime]
+    paid_amount: Optional[int]
+    notes: Optional[str]
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ClaimWithItemsOut(ClaimOut):
+    items: list[LossOut] = []
+
+
+class ClaimPatchIn(BaseModel):
+    status: Optional[str] = None
+    paid_amount: Optional[int] = None
+    notes: Optional[str] = None
+    submitted_at: Optional[datetime] = None
+    paid_at: Optional[datetime] = None
