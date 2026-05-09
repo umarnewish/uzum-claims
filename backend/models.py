@@ -4,7 +4,18 @@ Schema is set globally via the Base class in backend.db (DB_SCHEMA setting).
 """
 from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Date, DateTime, String, Text, func
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.db import Base
@@ -31,3 +42,66 @@ class SellerProfile(Base):
         onupdate=func.now(),
         nullable=False,
     )
+
+
+class Claim(Base):
+    __tablename__ = "claim"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    shop_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False)
+    total_amount: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    total_qty: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    generated_docx_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    generated_agreement_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    paid_amount: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class LostItem(Base):
+    __tablename__ = "lost_item"
+    __table_args__ = (
+        Index("ix_lost_item_user_claim", "user_id", "claim_id"),
+        UniqueConstraint("user_id", "source_ref", "loss_type", name="uq_lost_item_dedup"),
+        {"schema": Base.__table_args__["schema"]},
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    shop_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    loss_type: Mapped[str] = mapped_column(Text, nullable=False)
+    source_ref: Mapped[str] = mapped_column(Text, nullable=False)
+    uzum_sku_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    barcode: Mapped[str | None] = mapped_column(Text, nullable=True)
+    product_title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    expected_qty: Mapped[int] = mapped_column(Integer, nullable=False)
+    received_qty: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unit_price: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    unit_compensation: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    detected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    claim_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey(f"{Base.__table_args__['schema']}.claim.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    raw_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+
+class PollState(Base):
+    __tablename__ = "poll_state"
+
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    shop_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    source: Mapped[str] = mapped_column(Text, primary_key=True)
+    last_polled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_cursor: Mapped[str | None] = mapped_column(Text, nullable=True)

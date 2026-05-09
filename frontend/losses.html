@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Утери — Uzum Compensations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <nav class="topnav">
+    <span class="brand">Компенсации</span>
+    <a href="/">Главная</a>
+    <a href="/profile">Профиль</a>
+    <a href="/losses" class="active">Утери</a>
+  </nav>
+
+  <div class="shell">
+    <div class="card">
+      <div class="row-flex">
+        <div>
+          <h1>Утерянные товары</h1>
+          <p class="lead" id="status">Загрузка…</p>
+        </div>
+        <div class="actions" style="margin:0">
+          <button id="refresh-btn" class="primary">Обновить из Uzum</button>
+        </div>
+      </div>
+
+      <div id="filters" class="filters">
+        <label>Тип:
+          <select id="filter-type">
+            <option value="">все</option>
+            <option value="return_uzum_short">return_uzum_short</option>
+            <option value="return_transit">return_transit</option>
+            <option value="fbo_supply_reject">fbo_supply_reject</option>
+            <option value="fbo_warehouse">fbo_warehouse</option>
+            <option value="order_lost_delivery">order_lost_delivery</option>
+          </select>
+        </label>
+        <label>Статус:
+          <select id="filter-claim">
+            <option value="">все</option>
+            <option value="unclaimed">не в претензии</option>
+            <option value="claimed">в претензии</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="groups"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/static/js/losses.js"></script>
+</body>
+</html>
