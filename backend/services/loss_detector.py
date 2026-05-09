@@ -23,6 +23,14 @@ def _ret_source_ref(return_id: Any, item_key: Any) -> str:
     return f"return:{return_id}:{item_key}"
 
 
+def _inv_source_ref(invoice_id: Any, item_key: Any) -> str:
+    return f"invoice:{invoice_id}:{item_key}"
+
+
+def _ord_source_ref(order_id: Any) -> str:
+    return f"order:{order_id}"
+
+
 async def _upsert_lost_item(db: AsyncSession, row: dict[str, Any]) -> None:
     """Insert or update on (user_id, source_ref, loss_type).
 
@@ -88,41 +96,87 @@ async def detect_return_uzum_short(
     return found
 
 
-async def refresh_user(db: AsyncSession, *, user_id: int, jwt: str) -> dict[str, Any]:
-    """Run all detectors for every shop the user has connected in vendex.
-
-    Currently runs detect_return_uzum_short. Phases 5/6 add supply-reject
-    and lost-delivery detectors here.
+async def detect_supply_reject(
+    db: AsyncSession, *, user_id: int, shop_id: int, token: str,
+) -> int:
+    """Scan /v1/invoice for FBO supply lines where Uzum accepted less than
+    we sent (totalToStock − totalAccepted > 0). Each shortfall is a row
+    of loss_type='fbo_supply_reject'.
     """
+    found = 0
+    async for inv in uzum_client.iter_invoices(token, shop_id):
+        invoice_id = inv.get("id") or inv.get("invoiceId")
+        if invoice_id is None:
+            continue
+        try:
+            lines = await uzum_client.iter_invoice_lines(token, shop_id, invoice_id)
+        except Exception as e:
+            logger.warning("invoice %s lines failed: %s", invoice_id, e)
+            continue
+        for line in lines:
+            sent = _coerce_int(line.get("totalToStock"))
+            accepted = _coerce_int(line.get("totalAccepted"))
+            if sent is None or accepted is None:
+                continue
+            short = sent - accepted
+            if short <= 0:
+                continue
+            item_key = line.get("id") or line.get("productId") or line.get("skuId") or "x"
+            row = {
+                "user_id": user_id,
+                "shop_id": shop_id,
+                "loss_type": "fbo_supply_reject",
+                "source_ref": _inv_source_ref(invoice_id, item_key),
+                "uzum_sku_id": line.get("skuId"),
+                "barcode": line.get("barcode") or line.get("skuBarcode"),
+                "product_title": line.get("productTitle") or line.get("title") or line.get("name"),
+                "expected_qty": short,
+                "unit_price": _coerce_int(line.get("sellerPrice")) or _coerce_int(line.get("price")),
+                "unit_compensation": _coerce_compensation(line),
+                "reason": "брак при приёмке",
+                "raw_data": {"invoice": _slim(inv), "line": line},
+            }
+            await _upsert_lost_item(db, row)
+            found += 1
+    return found
+
+
+async def refresh_user(db: AsyncSession, *, user_id: int, jwt: str) -> dict[str, Any]:
+    """Run every detector for every shop the user has connected in vendex."""
     shops = await vendex_client.list_uzum_shops(jwt)
-    summary = {"shops": 0, "return_uzum_short": 0, "errors": []}
+    summary: dict[str, Any] = {
+        "shops": 0,
+        "return_uzum_short": 0,
+        "fbo_supply_reject": 0,
+        "order_lost_delivery": 0,
+        "errors": [],
+    }
     for shop in shops:
         if not shop.get("active") or not shop.get("token"):
             continue
         token = shop["token"]
         shop_id = shop.get("shop_id")
+        sids: list[int] = []
         if shop_id is None:
             try:
                 uzum_shops = await uzum_client.get_shops(token)
+                sids = [int(s["id"]) for s in uzum_shops]
             except Exception as e:
                 summary["errors"].append(f"get_shops: {e}")
                 continue
-            for s in uzum_shops:
-                sid = int(s["id"])
-                summary["shops"] += 1
-                try:
-                    n = await detect_return_uzum_short(db, user_id=user_id, shop_id=sid, token=token)
-                    summary["return_uzum_short"] += n
-                except Exception as e:
-                    summary["errors"].append(f"shop {sid}: {e}")
         else:
-            sid = int(shop_id)
+            sids = [int(shop_id)]
+        for sid in sids:
             summary["shops"] += 1
-            try:
-                n = await detect_return_uzum_short(db, user_id=user_id, shop_id=sid, token=token)
-                summary["return_uzum_short"] += n
-            except Exception as e:
-                summary["errors"].append(f"shop {sid}: {e}")
+            for name, fn in (
+                ("return_uzum_short", detect_return_uzum_short),
+                ("fbo_supply_reject", detect_supply_reject),
+            ):
+                try:
+                    n = await fn(db, user_id=user_id, shop_id=sid, token=token)
+                    summary[name] += n
+                except Exception as e:
+                    summary["errors"].append(f"shop {sid}/{name}: {e}")
     return summary
 
 
