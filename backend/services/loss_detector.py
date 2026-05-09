@@ -141,6 +141,57 @@ async def detect_supply_reject(
     return found
 
 
+async def detect_order_lost_delivery(
+    db: AsyncSession, *, user_id: int, shop_id: int, token: str,
+) -> int:
+    """Scan /v2/fbs/orders for CANCELED/RETURNED orders whose cancelReason
+    looks loss-shaped (carrier/storage loss, damage in transit). Each such
+    order item is one lost_item row.
+
+    Conservative: an order with status=CANCELED but a non-loss cancelReason
+    (customer cancellation, return-by-customer) is skipped. Tune
+    LOSS_CANCEL_REASONS after seeing real production data; until then,
+    a missing reason means we accept the order if status alone matches.
+    """
+    LOSS_STATUSES = {"CANCELED", "CANCELLED", "RETURNED"}
+    LOSS_CANCEL_REASONS = {
+        "LOST_BY_CARRIER", "LOST_IN_DELIVERY", "DAMAGED_IN_TRANSIT",
+        "LOST_IN_TRANSIT", "WAREHOUSE_LOSS", "COURIER_LOST",
+    }
+    found = 0
+    async for order in uzum_client.iter_orders(token, shop_id):
+        st = (order.get("status") or "").upper()
+        if st not in LOSS_STATUSES:
+            continue
+        reason = (order.get("cancelReason") or order.get("reason") or "").upper()
+        if reason and reason not in LOSS_CANCEL_REASONS:
+            continue
+        order_id = order.get("id") or order.get("orderId")
+        if order_id is None:
+            continue
+        items = order.get("items") or order.get("orderItems") or []
+        for it in items:
+            qty = _coerce_int(it.get("amount") or it.get("quantity")) or 1
+            item_key = it.get("id") or it.get("productId") or it.get("skuId") or "x"
+            row = {
+                "user_id": user_id,
+                "shop_id": shop_id,
+                "loss_type": "order_lost_delivery",
+                "source_ref": f"{_ord_source_ref(order_id)}:{item_key}",
+                "uzum_sku_id": it.get("skuId"),
+                "barcode": it.get("barcode") or it.get("skuBarcode"),
+                "product_title": it.get("productTitle") or it.get("title") or it.get("name"),
+                "expected_qty": qty,
+                "unit_price": _coerce_int(it.get("sellerPrice")) or _coerce_int(it.get("price")),
+                "unit_compensation": _coerce_compensation(it),
+                "reason": "потерян при доставке",
+                "raw_data": {"order": _slim(order), "item": it, "cancelReason": reason},
+            }
+            await _upsert_lost_item(db, row)
+            found += 1
+    return found
+
+
 async def refresh_user(db: AsyncSession, *, user_id: int, jwt: str) -> dict[str, Any]:
     """Run every detector for every shop the user has connected in vendex."""
     shops = await vendex_client.list_uzum_shops(jwt)
@@ -171,6 +222,7 @@ async def refresh_user(db: AsyncSession, *, user_id: int, jwt: str) -> dict[str,
             for name, fn in (
                 ("return_uzum_short", detect_return_uzum_short),
                 ("fbo_supply_reject", detect_supply_reject),
+                ("order_lost_delivery", detect_order_lost_delivery),
             ):
                 try:
                     n = await fn(db, user_id=user_id, shop_id=sid, token=token)
