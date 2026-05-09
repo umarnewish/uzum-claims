@@ -1,0 +1,27 @@
+# Local dev — uses external Postgres (the vendex one running on host).
+# In prod, this service runs from vendex's docker-compose.prod.yml on the
+# vendex_net network — see PLAN.md §12.
+services:
+  uzum-claims:
+    build: .
+    container_name: uzum-claims
+    restart: unless-stopped
+    ports:
+      - "8100:8100"
+    env_file: .env
+    volumes:
+      - ./backend:/app/backend
+      - ./frontend:/app/frontend
+      - ./templates:/app/templates
+      - claims_generated:/var/uzum-claims/generated
+    networks:
+      - vendex_default
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  vendex_default:
+    external: true
+
+volumes:
+  claims_generated:

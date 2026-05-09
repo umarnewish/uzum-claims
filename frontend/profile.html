@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Профиль продавца — Uzum Compensations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <nav class="topnav">
+    <span class="brand">Компенсации</span>
+    <a href="/">Главная</a>
+    <a href="/profile" class="active">Профиль</a>
+  </nav>
+
+  <div class="shell">
+    <div class="card">
+      <h1>Профиль продавца</h1>
+      <p class="lead" id="status">Загрузка…</p>
+
+      <form id="profile-form" autocomplete="off">
+        <h2>Лицо</h2>
+        <div class="row">
+          <div class="field">
+            <label>ФИО <span class="req">*</span></label>
+            <input type="text" name="fio" required placeholder="Абдурахимов Фозил Тошкулович" />
+          </div>
+          <div class="field">
+            <label>Юр. форма <span class="req">*</span></label>
+            <input type="text" name="legal_form" required placeholder="ООО" />
+          </div>
+        </div>
+        <div class="row full">
+          <div class="field">
+            <label>Юр. название <span class="req">*</span></label>
+            <input type="text" name="legal_name" required placeholder="ALFA POLIMER LINE" />
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>ИНН <span class="req">*</span></label>
+            <input type="text" name="inn" required />
+          </div>
+          <div class="field">
+            <label>ОКЭД</label>
+            <input type="text" name="oked" />
+          </div>
+        </div>
+
+        <h2>Банк</h2>
+        <div class="row">
+          <div class="field">
+            <label>Расчётный счёт <span class="req">*</span></label>
+            <input type="text" name="bank_account" required />
+          </div>
+          <div class="field">
+            <label>МФО <span class="req">*</span></label>
+            <input type="text" name="mfo" required />
+          </div>
+        </div>
+        <div class="row full">
+          <div class="field">
+            <label>Название банка <span class="req">*</span></label>
+            <input type="text" name="bank_name" required />
+          </div>
+        </div>
+
+        <h2>Адрес</h2>
+        <div class="row full">
+          <div class="field">
+            <label>Юр. адрес <span class="req">*</span></label>
+            <input type="text" name="address" required />
+          </div>
+        </div>
+
+        <h2>Базовый договор</h2>
+        <div class="row">
+          <div class="field">
+            <label>Номер договора</label>
+            <input type="text" name="base_contract_no" />
+          </div>
+          <div class="field">
+            <label>Дата договора</label>
+            <input type="date" name="base_contract_date" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="primary" id="save-btn">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="/static/js/profile.js"></script>
+</body>
+</html>
