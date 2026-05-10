@@ -11,3 +11,4 @@ venv/
 .vscode/
 .DS_Store
 generated/
+templates/.original/

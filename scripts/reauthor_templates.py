@@ -169,22 +169,95 @@ def reauthor_claim_uz() -> None:
 
 
 def reauthor_agreement_ru() -> None:
+    """Agreement RU has scalar PII split across multiple <w:t> runs that
+    the python-docx joined-paragraph replacer misses. Use raw XML
+    replacement on the concatenated paragraph text and collapse runs."""
     src = TEMPLATES / "agreement_ru.docx"
     print(f"\n→ {src.name}")
-    doc = Document(src)
 
     repls = [
+        # Order matters — longest string first so partial substrings don't
+        # pre-bind. The {{token}} placeholders match the keys docx_filler
+        # substitutes from the seller_profile + claim row.
         ("Дополнительное соглашение №", "Дополнительное соглашение №{{claim_no}}"),
+        ("Абдурахимов Фозил Тошкулович", "{{fio}}"),
+        ("г.Ташкент. Чиланзарский район, Гулистан 6-15", "{{address}}"),
+        ("Чиланзарский район, Гулистан 6-15", "{{address}}"),
+        ("ИП___ООО «ALFA POLIMER LINE»", "{{legal_form}} «{{legal_name}}»"),
+        ('"ALFA POLIMER LINE"', "«{{legal_name}}»"),
+        ("ALFA POLIMER LINE", "{{legal_name}}"),
+        ("20208000305061552001", "{{bank_account}}"),
+        ("АК «Хамкорбанк»", "{{bank_name}}"),
+        ("АК Хамкорбанк", "{{bank_name}}"),
+        ("Хамкорбанк", "{{bank_name}}"),
+        ("«03»   02   26г.", "{{claim_date}}"),
         ("№073456н", "№{{base_contract_no}}"),
         ("от 08.08.2023г.", "от {{base_contract_date}}г."),
-        ("«03»   02   26г.", "{{claim_date}}"),
-        # Party 2 block in the bottom table — fill key fields if labels exist.
-        ("ИП___ООО «ALFA POLIMER LINE»", "{{legal_form}} «{{legal_name}}»"),
+        ("306338752", "{{inn}}"),
+        ("057428н", "{{base_contract_no}}"),
+        ("12.05.2023", "{{base_contract_date}}"),
+        ("47190", "{{oked}}"),
+        ("00083", "{{mfo}}"),
     ]
-    n = replace_anywhere(doc, repls)
-    print(f"  scalar substitutions: {n}")
-    doc.save(src)
-    print(f"  saved {src}")
+    n = _xml_replace_paragraphs(src, repls)
+    print(f"  scalar substitutions: {n} paragraphs")
+
+
+def _xml_replace_paragraphs(path: Path, repls: list[tuple[str, str]]) -> int:
+    """Replace strings inside word/document.xml at the paragraph level.
+
+    Each <w:p> may have its visible text split across N <w:t> runs because
+    Word merges runs by formatting boundaries. The python-docx
+    replace-in-paragraph helper concatenates run text then writes back to
+    a single run — but only if the FIRST run's joined text contains the
+    needle. Some templates split tokens differently and that helper
+    misses them. This implementation walks every <w:p>, joins all <w:t>
+    children, applies replacements on the joined string, and if changed
+    writes the new text into the first <w:t> while clearing the rest.
+    """
+    import shutil, tempfile
+    import xml.etree.ElementTree as ET
+
+    W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    ET.register_namespace("w", W)
+
+    work = Path(tempfile.mkdtemp(prefix="reauthor_"))
+    try:
+        with __import__("zipfile").ZipFile(path, "r") as z:
+            z.extractall(work)
+        doc_xml = work / "word" / "document.xml"
+        tree = ET.parse(doc_xml)
+        root = tree.getroot()
+        changes = 0
+        for p in root.iter(f"{{{W}}}p"):
+            text_elems = [t for r in p.findall(f".//{{{W}}}r")
+                            for t in r.findall(f"{{{W}}}t")]
+            if not text_elems:
+                continue
+            joined = "".join(t.text or "" for t in text_elems)
+            new = joined
+            for needle, repl in repls:
+                if needle in new:
+                    new = new.replace(needle, repl)
+            if new == joined:
+                continue
+            changes += 1
+            text_elems[0].text = new
+            text_elems[0].set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+            for t in text_elems[1:]:
+                t.text = ""
+        tree.write(doc_xml, xml_declaration=True, encoding="UTF-8")
+        # Repack
+        import zipfile
+        with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+            for base, _, files in __import__("os").walk(work):
+                base_p = Path(base)
+                for f in files:
+                    full = base_p / f
+                    z.write(full, full.relative_to(work).as_posix())
+        return changes
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
 
 
 def reauthor_agreement_uz() -> None:
