@@ -45,6 +45,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# In production, nginx mounts this service at /claims/ and strips the prefix
+# before forwarding (proxy_pass http://uzum-claims:8100/;), so the backend
+# only ever sees /api, /static, /profile, etc. In standalone mode (no nginx)
+# the frontend uses <base href="/claims/">, which makes the browser request
+# /claims/api/..., /claims/static/..., /claims/profile, /claims/. This
+# middleware strips the /claims prefix on those incoming requests so the
+# existing routes resolve in both modes without duplicating registrations.
+@app.middleware("http")
+async def strip_claims_prefix(request, call_next):
+    scope = request.scope
+    path = scope.get("path", "")
+    # Strip "/claims/..." (trailing-slash form) so it maps to the existing
+    # routes. Bare "/claims" with no trailing slash is the history page
+    # route — leave that one alone.
+    if path.startswith("/claims/"):
+        new_path = path[len("/claims"):] or "/"
+        scope["path"] = new_path
+        scope["raw_path"] = new_path.encode()
+    return await call_next(request)
+
 app.include_router(health.router, prefix="/api")
 app.include_router(profile.router, prefix="/api")
 app.include_router(losses.router, prefix="/api")

@@ -1,24 +1,25 @@
 <!DOCTYPE html>
 <html lang="ru" data-theme="light">
 <head>
+  <base href="/claims/">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Новая претензия — Компенсации</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="stylesheet" href="static/css/styles.css">
 </head>
 <body>
 <div id="app-page" style="display:flex;min-height:100vh;">
   <aside class="sidebar">
     <div class="sidebar-logo">Компенс<span>ации</span></div>
     <nav>
-      <a class="sidebar-link" href="/">Главная</a>
-      <a class="sidebar-link" href="/profile">Профиль</a>
-      <a class="sidebar-link" href="/losses">Утери</a>
-      <a class="sidebar-link active" href="/new-claim">Новая претензия</a>
-      <a class="sidebar-link" href="/claims">История</a>
+      <a class="sidebar-link" href=".">Главная</a>
+      <a class="sidebar-link" href="profile">Профиль</a>
+      <a class="sidebar-link" href="losses">Утери</a>
+      <a class="sidebar-link active" href="new-claim">Новая претензия</a>
+      <a class="sidebar-link" href="claims">История</a>
     </nav>
   </aside>
 
@@ -74,7 +75,7 @@
     </div>
   </main>
 </div>
-<script type="module" src="/static/js/shell.js"></script>
-<script type="module" src="/static/js/new-claim.js"></script>
+<script type="module" src="static/js/shell.js"></script>
+<script type="module" src="static/js/new-claim.js"></script>
 </body>
 </html>

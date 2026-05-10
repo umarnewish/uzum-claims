@@ -24,7 +24,10 @@ export async function api(path, { method = 'GET', body, headers = {} } = {}) {
     credentials: 'include',
   };
   if (body !== undefined) opts.body = JSON.stringify(body);
-  const res = await fetch(path, opts);
+  // Strip leading "/" so the URL resolves against <base href="/claims/">.
+  // Standalone (no base hit) and iframe (under nginx /claims/) both work.
+  const url = path.startsWith('/') ? path.slice(1) : path;
+  const res = await fetch(url, opts);
   if (res.status === 204) return null;
   let data = null;
   try { data = await res.json(); } catch { /* non-json */ }

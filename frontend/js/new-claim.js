@@ -109,7 +109,7 @@ for (const el of [dlClaim, dlAgreement]) {
     ev.preventDefault();
     const kind = el.dataset.kind;
     try {
-      const res = await fetch(`/api/claims/${claimId}/download/${kind}`, {
+      const res = await fetch(`api/claims/${claimId}/download/${kind}`, {
         headers: { Authorization: `Bearer ${getToken()}` },
         credentials: 'include',
       });
