@@ -3,59 +3,65 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Утери — Uzum Compensations</title>
+  <title>Утери — Компенсации</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-  <nav class="topnav">
-    <span class="brand">Компенсации</span>
-    <a href="/">Главная</a>
-    <a href="/profile">Профиль</a>
-    <a href="/losses" class="active">Утери</a>
-    <a href="/new-claim">Новая претензия</a>
-    <a href="/claims">История</a>
-  </nav>
+<div id="app-page" style="display:flex;min-height:100vh;">
+  <aside class="sidebar">
+    <div class="sidebar-logo">Компенс<span>ации</span></div>
+    <nav>
+      <a class="sidebar-link" href="/">Главная</a>
+      <a class="sidebar-link" href="/profile">Профиль</a>
+      <a class="sidebar-link active" href="/losses">Утери</a>
+      <a class="sidebar-link" href="/new-claim">Новая претензия</a>
+      <a class="sidebar-link" href="/claims">История</a>
+    </nav>
+  </aside>
 
-  <div class="shell">
-    <div class="card">
-      <div class="row-flex">
-        <div>
-          <h1>Утерянные товары</h1>
-          <p class="lead" id="status">Загрузка…</p>
+  <main class="main-content">
+    <div class="claims-shell">
+      <div class="card">
+        <div class="row-flex">
+          <div>
+            <h1 class="page-title">Утерянные товары</h1>
+            <p class="lead" id="status">Загрузка…</p>
+          </div>
+          <div class="actions" style="margin:0">
+            <button id="create-claim-btn" class="btn" disabled>Создать претензию (0)</button>
+            <button id="refresh-btn" class="btn btn-primary">Обновить из Uzum</button>
+          </div>
         </div>
-        <div class="actions" style="margin:0">
-          <button id="create-claim-btn" disabled>Создать претензию (0)</button>
-          <button id="refresh-btn" class="primary">Обновить из Uzum</button>
+
+        <div class="filters">
+          <label>Тип:
+            <select id="filter-type" name="loss_type">
+              <option value="">все</option>
+              <option value="return_uzum_short">return_uzum_short</option>
+              <option value="return_transit">return_transit</option>
+              <option value="fbo_supply_reject">fbo_supply_reject</option>
+              <option value="fbo_warehouse">fbo_warehouse</option>
+              <option value="order_lost_delivery">order_lost_delivery</option>
+            </select>
+          </label>
+          <label>Статус:
+            <select id="filter-claim" name="claim_status">
+              <option value="">все</option>
+              <option value="unclaimed">не в претензии</option>
+              <option value="claimed">в претензии</option>
+            </select>
+          </label>
         </div>
-      </div>
 
-      <div id="filters" class="filters">
-        <label>Тип:
-          <select id="filter-type">
-            <option value="">все</option>
-            <option value="return_uzum_short">return_uzum_short</option>
-            <option value="return_transit">return_transit</option>
-            <option value="fbo_supply_reject">fbo_supply_reject</option>
-            <option value="fbo_warehouse">fbo_warehouse</option>
-            <option value="order_lost_delivery">order_lost_delivery</option>
-          </select>
-        </label>
-        <label>Статус:
-          <select id="filter-claim">
-            <option value="">все</option>
-            <option value="unclaimed">не в претензии</option>
-            <option value="claimed">в претензии</option>
-          </select>
-        </label>
+        <div id="groups"></div>
       </div>
-
-      <div id="groups"></div>
     </div>
-  </div>
-
-  <script type="module" src="/static/js/losses.js"></script>
+  </main>
+</div>
+<script type="module" src="/static/js/shell.js"></script>
+<script type="module" src="/static/js/losses.js"></script>
 </body>
 </html>

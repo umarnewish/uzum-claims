@@ -3,28 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Uzum Compensations</title>
+  <title>Компенсации</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-  <nav class="topnav">
-    <span class="brand">Компенсации</span>
-    <a href="/" class="active">Главная</a>
-    <a href="/profile">Профиль</a>
-    <a href="/losses">Утери</a>
-    <a href="/new-claim">Новая претензия</a>
-    <a href="/claims">История</a>
-  </nav>
+<div id="app-page" style="display:flex;min-height:100vh;">
+  <aside class="sidebar">
+    <div class="sidebar-logo">Компенс<span>ации</span></div>
+    <nav>
+      <a class="sidebar-link active" href="/">Главная</a>
+      <a class="sidebar-link" href="/profile">Профиль</a>
+      <a class="sidebar-link" href="/losses">Утери</a>
+      <a class="sidebar-link" href="/new-claim">Новая претензия</a>
+      <a class="sidebar-link" href="/claims">История</a>
+    </nav>
+  </aside>
 
-  <div class="shell">
-    <div class="card">
-      <h1>Компенсации <span class="badge">Phase 1</span></h1>
-      <p class="lead">Сервис uzum-claims запущен. Заполните <a href="/profile">профиль продавца</a> — данные используются для генерации претензий.</p>
-      <p><a href="/api/health">/api/health</a></p>
+  <main class="main-content">
+    <div class="claims-shell">
+      <h1 class="page-title">Компенсации Uzum Market</h1>
+      <p class="lead">Сервис отслеживания утерянных товаров и автогенерации претензий.</p>
+
+      <div class="card">
+        <h2>С чего начать</h2>
+        <ol>
+          <li>Заполните <a href="/profile" class="row-link">профиль продавца</a> — данные используются в шаблонах документов.</li>
+          <li>Откройте <a href="/losses" class="row-link">Утери</a> и нажмите «Обновить из Uzum» — мы сканируем ваши возвраты, поставки и заказы.</li>
+          <li>Выберите позиции → «Создать претензию» → «Сгенерировать docx» → скачайте файлы и отправьте в Uzum.</li>
+          <li>Отслеживайте статус в <a href="/claims" class="row-link">истории претензий</a>.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h2>Технические эндпоинты</h2>
+        <ul>
+          <li><a href="/api/health" class="row-link">/api/health</a></li>
+          <li><a href="/docs" class="row-link">/docs</a> — Swagger</li>
+        </ul>
+      </div>
     </div>
-  </div>
+  </main>
+</div>
+<script type="module" src="/static/js/shell.js"></script>
 </body>
 </html>

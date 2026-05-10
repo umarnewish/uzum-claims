@@ -3,72 +3,78 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Новая претензия — Uzum Compensations</title>
+  <title>Новая претензия — Компенсации</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-  <nav class="topnav">
-    <span class="brand">Компенсации</span>
-    <a href="/">Главная</a>
-    <a href="/profile">Профиль</a>
-    <a href="/losses">Утери</a>
-    <a href="/new-claim" class="active">Новая претензия</a>
-    <a href="/claims">История</a>
-  </nav>
+<div id="app-page" style="display:flex;min-height:100vh;">
+  <aside class="sidebar">
+    <div class="sidebar-logo">Компенс<span>ации</span></div>
+    <nav>
+      <a class="sidebar-link" href="/">Главная</a>
+      <a class="sidebar-link" href="/profile">Профиль</a>
+      <a class="sidebar-link" href="/losses">Утери</a>
+      <a class="sidebar-link active" href="/new-claim">Новая претензия</a>
+      <a class="sidebar-link" href="/claims">История</a>
+    </nav>
+  </aside>
 
-  <div class="shell">
-    <div class="card">
-      <h1 id="title">Претензия</h1>
-      <p class="lead" id="status">Загрузка…</p>
+  <main class="main-content">
+    <div class="claims-shell">
+      <div class="card">
+        <h1 class="page-title" id="title">Претензия</h1>
+        <p class="lead" id="status">Загрузка…</p>
 
-      <div id="summary" class="summary" hidden>
-        <div><span class="muted-text">Магазин</span><div id="sum-shop" class="primary-text"></div></div>
-        <div><span class="muted-text">Позиций</span><div id="sum-qty" class="primary-text"></div></div>
-        <div><span class="muted-text">Сумма</span><div id="sum-amount" class="primary-text"></div></div>
-        <div><span class="muted-text">Статус</span><div id="sum-status" class="primary-text"></div></div>
-      </div>
+        <div id="summary" class="summary" hidden>
+          <div><span class="muted-text">Магазин</span><div id="sum-shop" class="primary-text"></div></div>
+          <div><span class="muted-text">Позиций</span><div id="sum-qty" class="primary-text"></div></div>
+          <div><span class="muted-text">Сумма</span><div id="sum-amount" class="primary-text"></div></div>
+          <div><span class="muted-text">Статус</span><div id="sum-status" class="primary-text"></div></div>
+        </div>
 
-      <h2>Позиции</h2>
-      <table class="data" id="items-table">
-        <thead>
-          <tr>
-            <th>Товар</th><th class="num">Кол-во</th><th class="num">Комп./шт</th><th class="num">Итого</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+        <h2>Позиции</h2>
+        <table class="data" id="items-table">
+          <thead>
+            <tr>
+              <th>Товар</th><th class="num">Кол-во</th><th class="num">Комп./шт</th><th class="num">Итого</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
 
-      <div class="actions">
-        <button id="generate-btn" class="primary" disabled>Сгенерировать docx</button>
-        <a id="dl-claim" class="btn-link" href="#" hidden>Скачать претензию</a>
-        <a id="dl-agreement" class="btn-link" href="#" hidden>Скачать допсоглашение</a>
-      </div>
+        <div class="actions" style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button id="generate-btn" class="btn btn-primary" disabled>Сгенерировать docx</button>
+          <a id="dl-claim" class="btn-link" href="#" hidden>Скачать претензию</a>
+          <a id="dl-agreement" class="btn-link" href="#" hidden>Скачать допсоглашение</a>
+        </div>
 
-      <h2>Статус</h2>
-      <div class="status-bar">
-        <label>Статус
-          <select id="status-select">
-            <option value="draft">draft</option>
-            <option value="generated">generated</option>
-            <option value="submitted">submitted</option>
-            <option value="paid">paid</option>
-            <option value="rejected">rejected</option>
-          </select>
-        </label>
-        <label>Оплачено, сум
-          <input type="number" id="paid-amount" min="0" placeholder="—" />
-        </label>
-        <label>Заметки
-          <textarea id="notes" placeholder="—"></textarea>
-        </label>
-        <button id="save-status-btn">Сохранить</button>
+        <h2>Статус</h2>
+        <div class="status-bar">
+          <label for="status-select">Статус
+            <select id="status-select">
+              <option value="draft">draft</option>
+              <option value="generated">generated</option>
+              <option value="submitted">submitted</option>
+              <option value="paid">paid</option>
+              <option value="rejected">rejected</option>
+            </select>
+          </label>
+          <label for="paid-amount">Оплачено, сум
+            <input type="number" id="paid-amount" min="0" placeholder="—" />
+          </label>
+          <label for="notes">Заметки
+            <textarea id="notes" placeholder="—"></textarea>
+          </label>
+          <button id="save-status-btn" class="btn">Сохранить</button>
+        </div>
       </div>
     </div>
-  </div>
-
-  <script type="module" src="/static/js/new-claim.js"></script>
+  </main>
+</div>
+<script type="module" src="/static/js/shell.js"></script>
+<script type="module" src="/static/js/new-claim.js"></script>
 </body>
 </html>

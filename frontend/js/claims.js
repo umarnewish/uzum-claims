@@ -5,11 +5,11 @@ const tbody = document.querySelector('#claims-table tbody');
 const filter = document.getElementById('filter-status');
 
 const STATUS_BADGE = {
-  draft: 'badge-draft',
-  generated: 'badge-generated',
-  submitted: 'badge-submitted',
-  paid: 'badge-paid',
-  rejected: 'badge-rejected',
+  draft: 'claim-badge--draft',
+  generated: 'claim-badge--generated',
+  submitted: 'claim-badge--submitted',
+  paid: 'claim-badge--paid',
+  rejected: 'claim-badge--rejected',
 };
 
 function fmtMoney(v) {
@@ -35,7 +35,7 @@ function render(rows) {
       <td class="num">${c.total_qty ?? '—'}</td>
       <td class="num">${fmtMoney(c.total_amount)}</td>
       <td class="num">${fmtMoney(c.paid_amount)}</td>
-      <td><span class="status-badge ${badge}">${escape(c.status)}</span></td>
+      <td><span class="claim-badge ${badge}">${escape(c.status)}</span></td>
     </tr>`;
   }).join('');
 }

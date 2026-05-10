@@ -44,8 +44,13 @@ export function toast(msg, kind = '') {
     el.className = 'toast';
     document.body.appendChild(el);
   }
+  // Map shorthand to vendex toast classes
+  const cls = kind === 'success' ? 'toast-success'
+            : kind === 'error'   ? 'toast-error'
+            : kind === 'info'    ? 'toast-info'
+            : '';
   el.textContent = msg;
-  el.className = `toast show ${kind}`;
+  el.className = `toast show ${cls}`;
   clearTimeout(toast._t);
   toast._t = setTimeout(() => el.classList.remove('show'), 2200);
 }

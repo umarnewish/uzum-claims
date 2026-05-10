@@ -42,11 +42,11 @@ function render(items) {
       const claimed = r.claim_id ? `<span class="pill">в претензии #${r.claim_id}</span>` : '';
       const editable = !r.claim_id && r.loss_type !== 'return_transit';
       const recvCell = editable
-        ? `<input type="number" class="recv" data-id="${r.id}" min="0" max="${r.expected_qty}" value="${r.received_qty ?? ''}" placeholder="—"/>`
+        ? `<input type="number" class="recv" name="recv-${r.id}" aria-label="Получено для строки ${r.id}" data-id="${r.id}" min="0" max="${r.expected_qty}" value="${r.received_qty ?? ''}" placeholder="—"/>`
         : (r.received_qty ?? '—');
       return `
         <tr>
-          <td><input type="checkbox" data-id="${r.id}" ${r.claim_id ? 'disabled' : ''}/></td>
+          <td><input type="checkbox" name="loss-${r.id}" aria-label="Выбрать строку ${r.id}" data-id="${r.id}" ${r.claim_id ? 'disabled' : ''}/></td>
           <td>
             <div class="primary-text">${escape(r.product_title) || '—'}</div>
             <div class="muted-text">${escape(r.barcode) || ''}</div>

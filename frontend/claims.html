@@ -3,56 +3,62 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>История претензий — Uzum Compensations</title>
+  <title>История претензий — Компенсации</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-  <nav class="topnav">
-    <span class="brand">Компенсации</span>
-    <a href="/">Главная</a>
-    <a href="/profile">Профиль</a>
-    <a href="/losses">Утери</a>
-    <a href="/new-claim">Новая претензия</a>
-    <a href="/claims" class="active">История</a>
-  </nav>
+<div id="app-page" style="display:flex;min-height:100vh;">
+  <aside class="sidebar">
+    <div class="sidebar-logo">Компенс<span>ации</span></div>
+    <nav>
+      <a class="sidebar-link" href="/">Главная</a>
+      <a class="sidebar-link" href="/profile">Профиль</a>
+      <a class="sidebar-link" href="/losses">Утери</a>
+      <a class="sidebar-link" href="/new-claim">Новая претензия</a>
+      <a class="sidebar-link active" href="/claims">История</a>
+    </nav>
+  </aside>
 
-  <div class="shell">
-    <div class="card">
-      <div class="row-flex">
-        <div>
-          <h1>История претензий</h1>
-          <p class="lead" id="status">Загрузка…</p>
+  <main class="main-content">
+    <div class="claims-shell">
+      <div class="card">
+        <div class="row-flex">
+          <div>
+            <h1 class="page-title">История претензий</h1>
+            <p class="lead" id="status">Загрузка…</p>
+          </div>
+          <div class="filters" style="margin:0">
+            <label>Статус:
+              <select id="filter-status" name="status">
+                <option value="">все</option>
+                <option value="draft">draft</option>
+                <option value="generated">generated</option>
+                <option value="submitted">submitted</option>
+                <option value="paid">paid</option>
+                <option value="rejected">rejected</option>
+              </select>
+            </label>
+          </div>
         </div>
-        <div class="filters" style="margin:0">
-          <label>Статус:
-            <select id="filter-status">
-              <option value="">все</option>
-              <option value="draft">draft</option>
-              <option value="generated">generated</option>
-              <option value="submitted">submitted</option>
-              <option value="paid">paid</option>
-              <option value="rejected">rejected</option>
-            </select>
-          </label>
-        </div>
+
+        <table class="data" id="claims-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Магазин</th><th>Создана</th>
+              <th class="num">Позиций</th><th class="num">Сумма</th>
+              <th class="num">Оплачено</th><th>Статус</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
-
-      <table class="data" id="claims-table">
-        <thead>
-          <tr>
-            <th>ID</th><th>Магазин</th><th>Создана</th>
-            <th class="num">Позиций</th><th class="num">Сумма</th>
-            <th class="num">Оплачено</th><th>Статус</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
     </div>
-  </div>
-
-  <script type="module" src="/static/js/claims.js"></script>
+  </main>
+</div>
+<script type="module" src="/static/js/shell.js"></script>
+<script type="module" src="/static/js/claims.js"></script>
 </body>
 </html>
