@@ -190,22 +190,28 @@ def _is_loss_returncause(rc: str | None) -> bool:
     if not rc:
         return False
     s = rc.lower()
-    # Whitelisted phrases that indicate Uzum/logistics loss.
+    # Whitelisted phrases that indicate Uzum/logistics loss — the order was
+    # truly lost or damaged in transit, NOT cancelled by the customer before
+    # receipt. Curated from observed Uzum returnCause strings.
     POSITIVE = (
-        "до получения",     # "Отменён до получения" — never reached customer
-        "потер",            # потеряно
+        "потер",            # потеряно / потерян курьером
+        "утер",             # утеря / утерян
         "склад",            # склад / warehouse loss
-        "достав",           # доставка / delivery issue
-        "поврежд",          # повреждение / damage
-        "брак",             # defect found by Uzum
-        "не доехал",
+        "поврежд",          # повреждение / damage in transit
+        "не доехал",        # didn't reach destination
+        "не доставлен",     # not delivered
+        "курьер",           # курьер потерял / курьер не доставил
     )
-    # Phrases that look loss-shaped but are customer-side; explicit deny.
+    # Phrases that look loss-shaped but are customer-side or out-of-scope.
+    # Explicit deny so they never fall through to a partial POSITIVE match.
     NEGATIVE = (
         "клиент",           # клиент отказался
         "покупател",        # покупатель отказался
         "передум",          # передумал
-        "возврат",          # purchase return — distinct from claims flow
+        "возврат",           # purchase return — distinct from claims flow
+        "до получения",     # "Отменён до получения" — customer cancel pre-delivery, NOT a loss
+        "брак",              # defect — separate compensation category, not delivery loss
+        "отказ",             # отказ покупателя / отказ от заказа
     )
     if any(n in s for n in NEGATIVE):
         return False
