@@ -9,6 +9,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from datetime import date as _date, timedelta as _td
+
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,10 +60,7 @@ async def _upsert_lost_item(db: AsyncSession, row: dict[str, Any]) -> None:
 async def detect_return_uzum_short(
     db: AsyncSession, *, user_id: int, shop_id: int, token: str,
 ) -> int:
-    """Scan /v1/return for items where Uzum packed less than expected.
-
-    Returns count of detected/updated rows.
-    """
+    """Scan /v1/return for items where Uzum packed less than expected."""
     found = 0
     async for ret in uzum_client.iter_returns(token, shop_id):
         return_id = ret.get("id") or ret.get("returnId")
@@ -77,6 +76,9 @@ async def detect_return_uzum_short(
                 continue
             short = amount - packed
             item_key = it.get("id") or it.get("productId") or it.get("skuId") or "x"
+            # Return items lack barcode + sellerPrice fields (verified
+            # against real API). Title falls back to skuTitle. Unit price
+            # left NULL — enriched in Phase 5/6 from finance/orders.
             row = {
                 "user_id": user_id,
                 "shop_id": shop_id,
@@ -84,9 +86,12 @@ async def detect_return_uzum_short(
                 "source_ref": _ret_source_ref(return_id, item_key),
                 "uzum_sku_id": it.get("skuId"),
                 "barcode": it.get("barcode") or it.get("skuBarcode"),
-                "product_title": it.get("productTitle") or it.get("title") or it.get("name"),
+                "product_title": (it.get("productTitle") or it.get("skuTitle")
+                                  or it.get("title") or it.get("name")),
                 "expected_qty": short,
-                "unit_price": _coerce_int(it.get("sellerPrice")) or _coerce_int(it.get("price")),
+                "unit_price": _coerce_int(it.get("sellerPrice"))
+                              or _coerce_int(it.get("price"))
+                              or _coerce_int(it.get("purchasePrice")),
                 "unit_compensation": _coerce_compensation(it),
                 "reason": "утеря",
                 "raw_data": {"return": _slim(ret), "item": it},
@@ -96,17 +101,51 @@ async def detect_return_uzum_short(
     return found
 
 
+def _parse_dmy(s: str | None) -> _date | None:
+    """Uzum's invoice dates are 'DD.MM.YYYY' strings."""
+    if not s:
+        return None
+    try:
+        d, m, y = s.split(".")
+        return _date(int(y), int(m), int(d))
+    except (ValueError, AttributeError):
+        return None
+
+
 async def detect_supply_reject(
     db: AsyncSession, *, user_id: int, shop_id: int, token: str,
+    days_window: int = 90,
 ) -> int:
-    """Scan /v1/invoice for FBO supply lines where Uzum accepted less than
-    we sent (totalToStock − totalAccepted > 0). Each shortfall is a row
-    of loss_type='fbo_supply_reject'.
+    """Scan /v1/invoice + /v1/shop/{shop}/invoice/products for SKU-level
+    shortfalls. Skip invoices that haven't been accepted yet (status
+    NEW/IN_PROGRESS — `quantityAccepted` legitimately starts at 0 there
+    and would otherwise create a noisy row per SKU per pending supply).
+
+    Field names: `quantityToStock` (sent) vs `quantityAccepted` (received).
+    Bounded to invoices created in the last `days_window` days to keep
+    the per-invoice line-fetch fan-out tractable. Uzum returns invoices
+    sorted DESC by date, so we can early-exit once we cross the window.
     """
+    # CREATED/IN_TRANSIT invoices haven't reached the warehouse yet — their
+    # quantityAccepted is legitimately 0 and would otherwise produce a
+    # noisy row per SKU per pending supply.
+    SKIP_STATUSES = {"CREATED", "NEW", "IN_PROGRESS", "DRAFT", "PENDING", "IN_TRANSIT"}
+    cutoff = _date.today() - _td(days=days_window)
     found = 0
     async for inv in uzum_client.iter_invoices(token, shop_id):
         invoice_id = inv.get("id") or inv.get("invoiceId")
         if invoice_id is None:
+            continue
+        created = _parse_dmy(inv.get("dateCreated"))
+        if created is not None and created < cutoff:
+            return found  # early exit: rest of pages are older
+        # `invoiceStatus` is an object: {text, color, value}. Pull `.value`.
+        st_obj = inv.get("invoiceStatus") or inv.get("status")
+        if isinstance(st_obj, dict):
+            status = (st_obj.get("value") or "").upper()
+        else:
+            status = (st_obj or "").upper()
+        if status in SKIP_STATUSES:
             continue
         try:
             lines = await uzum_client.iter_invoice_lines(token, shop_id, invoice_id)
@@ -114,81 +153,120 @@ async def detect_supply_reject(
             logger.warning("invoice %s lines failed: %s", invoice_id, e)
             continue
         for line in lines:
-            sent = _coerce_int(line.get("totalToStock"))
-            accepted = _coerce_int(line.get("totalAccepted"))
+            sent = _coerce_int(line.get("quantityToStock"))
+            accepted = _coerce_int(line.get("quantityAccepted"))
             if sent is None or accepted is None:
                 continue
             short = sent - accepted
             if short <= 0:
                 continue
-            item_key = line.get("id") or line.get("productId") or line.get("skuId") or "x"
+            item_key = line.get("id") or line.get("skuId") or "x"
             row = {
                 "user_id": user_id,
                 "shop_id": shop_id,
                 "loss_type": "fbo_supply_reject",
                 "source_ref": _inv_source_ref(invoice_id, item_key),
                 "uzum_sku_id": line.get("skuId"),
-                "barcode": line.get("barcode") or line.get("skuBarcode"),
-                "product_title": line.get("productTitle") or line.get("title") or line.get("name"),
+                "barcode": None,
+                "product_title": line.get("productTitle") or line.get("skuTitle"),
                 "expected_qty": short,
-                "unit_price": _coerce_int(line.get("sellerPrice")) or _coerce_int(line.get("price")),
-                "unit_compensation": _coerce_compensation(line),
+                "unit_price": _coerce_int(line.get("purchasePrice")),
+                "unit_compensation": _coerce_int(line.get("purchasePrice")),
                 "reason": "брак при приёмке",
-                "raw_data": {"invoice": _slim(inv), "line": line},
+                "raw_data": {"invoice_id": invoice_id, "invoice_status": status, "line": line},
             }
             await _upsert_lost_item(db, row)
             found += 1
     return found
 
 
+def _is_loss_returncause(rc: str | None) -> bool:
+    """Heuristic on Russian Uzum returnCause strings. Matches phrases
+    that signal Uzum-side loss / non-delivery (no payout to seller),
+    not customer-side cancellations or refunds.
+
+    Curated from observed values — extend as new strings appear.
+    """
+    if not rc:
+        return False
+    s = rc.lower()
+    # Whitelisted phrases that indicate Uzum/logistics loss.
+    POSITIVE = (
+        "до получения",     # "Отменён до получения" — never reached customer
+        "потер",            # потеряно
+        "склад",            # склад / warehouse loss
+        "достав",           # доставка / delivery issue
+        "поврежд",          # повреждение / damage
+        "брак",             # defect found by Uzum
+        "не доехал",
+    )
+    # Phrases that look loss-shaped but are customer-side; explicit deny.
+    NEGATIVE = (
+        "клиент",           # клиент отказался
+        "покупател",        # покупатель отказался
+        "передум",          # передумал
+        "возврат",          # purchase return — distinct from claims flow
+    )
+    if any(n in s for n in NEGATIVE):
+        return False
+    return any(p in s for p in POSITIVE)
+
+
 async def detect_order_lost_delivery(
     db: AsyncSession, *, user_id: int, shop_id: int, token: str,
+    days_window: int = 90,
 ) -> int:
-    """Scan /v2/fbs/orders for CANCELED/RETURNED orders whose cancelReason
-    looks loss-shaped (carrier/storage loss, damage in transit). Each such
-    order item is one lost_item row.
+    """Scan /v1/finance/orders for CANCELED/PARTIALLY_CANCELLED items
+    with no payout (`withdrawnProfit == 0`) and a loss-shaped returnCause.
 
-    Conservative: an order with status=CANCELED but a non-loss cancelReason
-    (customer cancellation, return-by-customer) is skipped. Tune
-    LOSS_CANCEL_REASONS after seeing real production data; until then,
-    a missing reason means we accept the order if status alone matches.
+    Pivoted from /v2/fbs/orders (which 403s on regular seller tokens) to
+    finance/orders (verified working in vendex). Date window defaults to
+    last 90 days to keep the scan bounded.
     """
-    LOSS_STATUSES = {"CANCELED", "CANCELLED", "RETURNED"}
-    LOSS_CANCEL_REASONS = {
-        "LOST_BY_CARRIER", "LOST_IN_DELIVERY", "DAMAGED_IN_TRANSIT",
-        "LOST_IN_TRANSIT", "WAREHOUSE_LOSS", "COURIER_LOST",
-    }
+    import time
+
+    LOSS_STATUSES = {"CANCELED", "CANCELLED", "PARTIALLY_CANCELLED"}
+    now_sec = int(time.time())
+    date_from_sec = now_sec - days_window * 86400
+
+    items = await uzum_client.fetch_finance_orders(
+        token, [shop_id], date_from_sec=date_from_sec, date_to_sec=now_sec
+    )
     found = 0
-    async for order in uzum_client.iter_orders(token, shop_id):
-        st = (order.get("status") or "").upper()
+    for it in items:
+        st = (it.get("status") or "").upper()
         if st not in LOSS_STATUSES:
             continue
-        reason = (order.get("cancelReason") or order.get("reason") or "").upper()
-        if reason and reason not in LOSS_CANCEL_REASONS:
+        # If the seller already got paid, this is not a loss.
+        withdrawn = _coerce_int(it.get("withdrawnProfit")) or 0
+        if withdrawn > 0:
             continue
-        order_id = order.get("id") or order.get("orderId")
-        if order_id is None:
+        rc = it.get("returnCause") or it.get("cancelReason")
+        if not _is_loss_returncause(rc):
             continue
-        items = order.get("items") or order.get("orderItems") or []
-        for it in items:
-            qty = _coerce_int(it.get("amount") or it.get("quantity")) or 1
-            item_key = it.get("id") or it.get("productId") or it.get("skuId") or "x"
-            row = {
-                "user_id": user_id,
-                "shop_id": shop_id,
-                "loss_type": "order_lost_delivery",
-                "source_ref": f"{_ord_source_ref(order_id)}:{item_key}",
-                "uzum_sku_id": it.get("skuId"),
-                "barcode": it.get("barcode") or it.get("skuBarcode"),
-                "product_title": it.get("productTitle") or it.get("title") or it.get("name"),
-                "expected_qty": qty,
-                "unit_price": _coerce_int(it.get("sellerPrice")) or _coerce_int(it.get("price")),
-                "unit_compensation": _coerce_compensation(it),
-                "reason": "потерян при доставке",
-                "raw_data": {"order": _slim(order), "item": it, "cancelReason": reason},
-            }
-            await _upsert_lost_item(db, row)
-            found += 1
+        order_id = it.get("orderId") or it.get("id")
+        item_key = it.get("id") or it.get("productId") or "x"
+        qty = _coerce_int(it.get("amount") or it.get("quantity")) or 1
+        seller_price = (_coerce_int(it.get("sellPrice"))
+                        or _coerce_int(it.get("sellerPrice")))
+        commission = _coerce_int(it.get("commission")) or 0
+        comp = max((seller_price or 0) - commission, 0) if seller_price is not None else None
+        row = {
+            "user_id": user_id,
+            "shop_id": shop_id,
+            "loss_type": "order_lost_delivery",
+            "source_ref": f"{_ord_source_ref(order_id)}:{item_key}",
+            "uzum_sku_id": it.get("skuId") or it.get("productId"),
+            "barcode": None,
+            "product_title": it.get("productTitle") or it.get("skuTitle"),
+            "expected_qty": qty,
+            "unit_price": seller_price,
+            "unit_compensation": comp,
+            "reason": "потерян при доставке",
+            "raw_data": {"finance_item": it},
+        }
+        await _upsert_lost_item(db, row)
+        found += 1
     return found
 
 
