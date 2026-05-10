@@ -14,6 +14,10 @@ const itemsTbody = document.querySelector('#items-table tbody');
 const genBtn = document.getElementById('generate-btn');
 const dlClaim = document.getElementById('dl-claim');
 const dlAgreement = document.getElementById('dl-agreement');
+const statusSelect = document.getElementById('status-select');
+const paidAmount = document.getElementById('paid-amount');
+const notesEl = document.getElementById('notes');
+const saveStatusBtn = document.getElementById('save-status-btn');
 
 function fmtMoney(v) {
   if (v == null) return '—';
@@ -51,6 +55,10 @@ function render(claim) {
       <td class="num">${fmtMoney(total)}</td>
     </tr>`;
   }).join('');
+
+  statusSelect.value = claim.status;
+  paidAmount.value = claim.paid_amount ?? '';
+  notesEl.value = claim.notes ?? '';
 
   const generated = !!claim.generated_docx_path;
   genBtn.disabled = false;
@@ -120,5 +128,23 @@ for (const el of [dlClaim, dlAgreement]) {
     }
   });
 }
+
+saveStatusBtn.addEventListener('click', async () => {
+  saveStatusBtn.disabled = true;
+  try {
+    const body = {
+      status: statusSelect.value,
+      paid_amount: paidAmount.value === '' ? null : Number(paidAmount.value),
+      notes: notesEl.value || null,
+    };
+    await api(`/api/claims/${claimId}`, { method: 'PATCH', body });
+    toast('Сохранено', 'success');
+    await load();
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    saveStatusBtn.disabled = false;
+  }
+});
 
 load();

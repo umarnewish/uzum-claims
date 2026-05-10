@@ -16,6 +16,7 @@
     <a href="/profile">Профиль</a>
     <a href="/losses">Утери</a>
     <a href="/new-claim" class="active">Новая претензия</a>
+    <a href="/claims">История</a>
   </nav>
 
   <div class="shell">
@@ -44,6 +45,26 @@
         <button id="generate-btn" class="primary" disabled>Сгенерировать docx</button>
         <a id="dl-claim" class="btn-link" href="#" hidden>Скачать претензию</a>
         <a id="dl-agreement" class="btn-link" href="#" hidden>Скачать допсоглашение</a>
+      </div>
+
+      <h2>Статус</h2>
+      <div class="status-bar">
+        <label>Статус
+          <select id="status-select">
+            <option value="draft">draft</option>
+            <option value="generated">generated</option>
+            <option value="submitted">submitted</option>
+            <option value="paid">paid</option>
+            <option value="rejected">rejected</option>
+          </select>
+        </label>
+        <label>Оплачено, сум
+          <input type="number" id="paid-amount" min="0" placeholder="—" />
+        </label>
+        <label>Заметки
+          <textarea id="notes" placeholder="—"></textarea>
+        </label>
+        <button id="save-status-btn">Сохранить</button>
       </div>
     </div>
   </div>

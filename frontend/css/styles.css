@@ -158,3 +158,27 @@ table.data input.recv:focus { outline: 2px solid var(--accent); outline-offset: 
   font: inherit; font-weight: 500; color: var(--text); text-decoration: none;
 }
 .btn-link:hover { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+
+.status-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
+}
+.badge-draft     { background: #f3f4f6; color: #4b5563; }
+.badge-generated { background: var(--accent-bg); color: var(--accent); }
+.badge-submitted { background: #fef3c7; color: #b45309; }
+.badge-paid      { background: #dcfce7; color: #15803d; }
+.badge-rejected  { background: #fee2e2; color: #b91c1c; }
+
+.row-link { color: var(--accent); text-decoration: none; font-weight: 600; }
+.row-link:hover { text-decoration: underline; }
+
+.status-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 16px 0 24px; padding: 14px 18px; background: #fafafb; border-radius: 8px;
+}
+.status-bar select, .status-bar input[type=number], .status-bar textarea {
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+  font: inherit; background: #fff;
+}
+.status-bar textarea { min-height: 38px; min-width: 220px; resize: vertical; }
+.status-bar label { font-weight: 500; color: var(--muted); margin-bottom: 0; }

@@ -70,6 +70,10 @@ if os.path.isdir(frontend_path):
     async def new_claim_page():
         return FileResponse(os.path.join(frontend_path, "new-claim.html"))
 
+    @app.get("/claims", include_in_schema=False)
+    async def claims_page():
+        return FileResponse(os.path.join(frontend_path, "claims.html"))
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

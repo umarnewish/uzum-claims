@@ -5,7 +5,7 @@ import logging
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +14,7 @@ from backend.auth import get_current_user_id
 from backend.config import get_settings
 from backend.db import get_db
 from backend.models import Claim, LostItem, SellerProfile
-from backend.schemas import ClaimCreateIn, ClaimOut, ClaimWithItemsOut
+from backend.schemas import ClaimCreateIn, ClaimOut, ClaimPatchIn, ClaimWithItemsOut
 from backend.services import docx_filler
 
 logger = logging.getLogger(__name__)
@@ -152,6 +152,60 @@ async def download(
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         filename=download_name,
     )
+
+
+VALID_STATUSES = {"draft", "generated", "submitted", "paid", "rejected"}
+
+
+@router.get("/claims", response_model=list[ClaimOut])
+async def list_claims(
+    status_filter: str | None = Query(default=None, alias="status"),
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    q = select(Claim).where(Claim.user_id == user_id)
+    if status_filter:
+        q = q.where(Claim.status == status_filter)
+    q = q.order_by(Claim.created_at.desc())
+    return (await db.scalars(q)).all()
+
+
+@router.patch("/claims/{claim_id}", response_model=ClaimOut)
+async def patch_claim(
+    claim_id: int,
+    payload: ClaimPatchIn,
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    claim = await db.scalar(
+        select(Claim).where(Claim.id == claim_id, Claim.user_id == user_id)
+    )
+    if claim is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Claim not found")
+    if payload.status is not None:
+        if payload.status not in VALID_STATUSES:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                f"status must be one of {sorted(VALID_STATUSES)}",
+            )
+        claim.status = payload.status
+        # Auto-stamp transition timestamps if not supplied
+        now = datetime.now(timezone.utc)
+        if payload.status == "submitted" and claim.submitted_at is None and payload.submitted_at is None:
+            claim.submitted_at = now
+        if payload.status == "paid" and claim.paid_at is None and payload.paid_at is None:
+            claim.paid_at = now
+    if payload.submitted_at is not None:
+        claim.submitted_at = payload.submitted_at
+    if payload.paid_at is not None:
+        claim.paid_at = payload.paid_at
+    if payload.paid_amount is not None:
+        claim.paid_amount = payload.paid_amount
+    if payload.notes is not None:
+        claim.notes = payload.notes
+    await db.flush()
+    await db.refresh(claim)
+    return claim
 
 
 @router.get("/claims/{claim_id}", response_model=ClaimWithItemsOut)
