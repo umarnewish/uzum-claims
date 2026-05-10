@@ -9,6 +9,7 @@ const FIELDS = [
 const form = document.getElementById('profile-form');
 const submitBtn = document.getElementById('save-btn');
 const status = document.getElementById('status');
+const nextStep = document.getElementById('next-step');
 
 function fillForm(data) {
   for (const f of FIELDS) {
@@ -35,6 +36,7 @@ async function load() {
     const data = await api('/api/profile');
     fillForm(data);
     status.textContent = `Сохранено: ${new Date(data.updated_at).toLocaleString('ru-RU')}`;
+    nextStep.style.display = '';
   } catch (e) {
     if (e.status === 404) {
       status.textContent = 'Профиль ещё не заполнен. Заполните форму и нажмите «Сохранить».';
@@ -54,6 +56,7 @@ form.addEventListener('submit', async (ev) => {
     const data = await api('/api/profile', { method: 'PUT', body: payload });
     fillForm(data);
     status.textContent = `Сохранено: ${new Date(data.updated_at).toLocaleString('ru-RU')}`;
+    nextStep.style.display = '';
     toast('Профиль сохранён', 'success');
   } catch (e) {
     toast(e.message, 'error');

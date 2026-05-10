@@ -34,17 +34,17 @@
           <div class="form-grid">
             <div class="field">
               <label for="fld-fio">ФИО <span class="req">*</span></label>
-              <input id="fld-fio" type="text" name="fio" required placeholder="Абдурахимов Фозил Тошкулович" />
+              <input id="fld-fio" type="text" name="fio" required placeholder="Фамилия Имя Отчество" />
             </div>
             <div class="field">
               <label for="fld-legal_form">Юр. форма <span class="req">*</span></label>
-              <input id="fld-legal_form" type="text" name="legal_form" required placeholder="ООО" />
+              <input id="fld-legal_form" type="text" name="legal_form" required placeholder="ООО / ИП / ЧП" />
             </div>
           </div>
           <div class="form-grid full">
             <div class="field">
               <label for="fld-legal_name">Юр. название <span class="req">*</span></label>
-              <input id="fld-legal_name" type="text" name="legal_name" required placeholder="ALFA POLIMER LINE" />
+              <input id="fld-legal_name" type="text" name="legal_name" required placeholder="Название компании" />
             </div>
           </div>
           <div class="form-grid">
@@ -96,8 +96,9 @@
             </div>
           </div>
 
-          <div class="actions" style="margin-top:24px;">
+          <div class="actions" style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
             <button type="submit" class="btn btn-primary" id="save-btn">Сохранить</button>
+            <a id="next-step" class="btn btn-secondary" href="losses" style="display:none;">Перейти к утерям →</a>
           </div>
         </form>
       </div>
