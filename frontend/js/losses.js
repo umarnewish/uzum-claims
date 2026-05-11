@@ -66,7 +66,8 @@ function render(items) {
         <table class="data">
           <thead>
             <tr>
-              <th></th><th>Товар</th><th class="num">Ожид.</th><th class="num">Получ.</th>
+              <th><input type="checkbox" class="select-all" aria-label="Выбрать все строки в группе"/></th>
+              <th>Товар</th><th class="num">Ожид.</th><th class="num">Получ.</th>
               <th class="num">Комп./шт</th><th class="num">Итого</th><th></th>
             </tr>
           </thead>
@@ -126,8 +127,37 @@ function syncCreateBtn() {
   createBtn.textContent = `Создать претензию (${ids.length})`;
 }
 
+// Per-group select-all: toggling the header checkbox checks/unchecks every
+// non-claimed row checkbox in that group's tbody. Conversely, when individual
+// rows change, the header checkbox reflects all-checked / none / partial state.
+function rowBoxesInGroup(groupEl) {
+  return [...groupEl.querySelectorAll('tbody input[type=checkbox][data-id]:not(:disabled)')];
+}
+function syncSelectAllForGroup(groupEl) {
+  const head = groupEl.querySelector('input.select-all');
+  if (!head) return;
+  const boxes = rowBoxesInGroup(groupEl);
+  if (!boxes.length) { head.checked = false; head.indeterminate = false; head.disabled = true; return; }
+  head.disabled = false;
+  const checked = boxes.filter((b) => b.checked).length;
+  head.checked = checked === boxes.length;
+  head.indeterminate = checked > 0 && checked < boxes.length;
+}
+
 groups.addEventListener('change', (ev) => {
-  if (ev.target.matches('input[type=checkbox][data-id]')) syncCreateBtn();
+  const t = ev.target;
+  if (t.matches('input.select-all')) {
+    const groupEl = t.closest('.group');
+    const wantChecked = t.checked;
+    rowBoxesInGroup(groupEl).forEach((b) => { b.checked = wantChecked; });
+    syncCreateBtn();
+    return;
+  }
+  if (t.matches('input[type=checkbox][data-id]')) {
+    const groupEl = t.closest('.group');
+    if (groupEl) syncSelectAllForGroup(groupEl);
+    syncCreateBtn();
+  }
 });
 
 createBtn.addEventListener('click', async () => {
